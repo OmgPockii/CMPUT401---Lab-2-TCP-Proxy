@@ -20,14 +20,18 @@ def get_remote_ip(host):
     print (f'Ip address of {host} is {remote_ip}')
     return remote_ip
 
-def handle_request(addr, conn):
-    print("Connected by", addr)
-    
-    #recieve data, wait a bit, then send it back
-    full_data = conn.recv(BUFFER_SIZE)
-    conn.sendall(full_data)
-    conn.shutdown(socket.SHUT_RDWR)
-    conn.close()
+def handle_request(proxy_end, conn):
+    send_full_data = conn.recv(BUFFER_SIZE)
+    print(f"Sending received data {send_full_data} to Google")
+    proxy_end.sendall(send_full_data)
+
+    #remember to shut down
+    proxy_end.shutdown(socket.SHUT_WR)
+
+    data = proxy_end.recv(BUFFER_SIZE)
+    print(f"Sending received data {data} to client")
+    #ssend data back
+    conn.send(data)
 
 def main():
     #setup 
@@ -55,8 +59,7 @@ def main():
 
                 #multiprocessing
                 #accept connections and start a Process daemon for handling multiple connections
-                conn, addr = proxy_start.accept()
-                p = Process(target=handle_request, args=(addr,conn))
+                p = Process(target=handle_request, args=(proxy_end,conn))
                 p.daemon = True
                 p.start()
                 print("Started process ", p)
